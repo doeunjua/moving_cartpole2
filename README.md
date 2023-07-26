@@ -183,7 +183,8 @@ env.close()
 ```
 # 결과
 
-![Alt text](Animation2.gif)
+![Animation2](https://github.com/doeunjua/moving_cartpole2/assets/122878319/ff5af317-c511-428c-a961-1f429e883c31)
+
 
 # 종원 보상 체계로 했을 때 더 잘됨
 ```python
@@ -209,6 +210,9 @@ def reward_function(next_state): #state 1x4
             return velocity*angle*50
     else:
         return 0.05
+
+#결과
+![Animation](https://github.com/doeunjua/moving_cartpole2/assets/122878319/1f4f0801-7011-48ac-928c-a8ad1060b93e)
 
 ```
 # 결과
