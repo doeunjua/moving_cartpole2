@@ -98,6 +98,17 @@ def reward_function_2(next_state): #state 1x4
 - `print(env.theta_threshold_radians)`:0.20943951023931953
 
 - `print(env.x_threshold)`:2.4
+- reward_function_1분석
+-if -1.1 < next_cart_pos < -0.9:: next_cart_pos가 -1에 도달하는 경우, 목표 지점에 도달했을 때 높은 보상 5를 줍니다. 
+
+- elif cart_pos > -0.9:: 이 부분은 현재 카트가 -1보다 오른쪽에 있는 경우, next_cart_pos가 현재 카트의 위치보다 왼쪽으로 가야하기 때문에, next_cart_pos < cart_pos일 때 높은 보상을 주도록 설정되어 있습니다.
+
+- else:: 이 부분은 현재 카트가 -1보다 왼쪽에 있는 경우, next_cart_pos가 현재 카트의 위치보다 오른쪽으로 가야하기 때문에, next_cart_pos > cart_pos일 때 높은 보상을 주도록 설정되어 있습니다.
+
+- if abs(next_state[2]) > env.theta_threshold_radians or abs(next_state[0]) > env.x_threshold: 넘어지면 -10의 보상.
+- reward_function_2도 1과 마찬가지로 해석하면 된다.
+
+
 ### **step6.학습**
 ```python
 for k in range(trys):
@@ -181,13 +192,99 @@ for k in range(trys):
 #환경 close
 env.close()
 ```
-# 결과
+- 짝수번째 episode에서는 -1에서 시작해서 right로 가는 것을 학습
+- 홀수번째 episode에서는 1에서 시작해서 left로 가는 것을 학습
+- if cart_goal == 'left' and next_state[0] < -0.3: 왼쪽으로 가는 것이 목표일때 다음 상태 위치가 -0.3보다 작으면은 score에 1을 더해준다
+- if cart_goal == 'right' and next_state[0] > 0.3: 오른쪽으로 가는 것이 목표일때 다음 상태 위치가 0.3보다 크면은 score에 1을 더해준다
+- ```python
+  if score >= 4:
+            model.save_weights('moving_cartpole_idea5.h5')```
+  score가 4보다 크면 가중치를 저장해 준다.
+
+## **인퍼런스**
+```python
+import gymnasium as gym
+import numpy as np
+import random
+from keras.layers import Dense
+from tensorflow import keras
+from keras import Model
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+# 뉴럴 네트워크 모델 만들기
+class DQN(Model):
+    def __init__(self):
+        super(DQN, self).__init__()
+        self.d1 = Dense(1024, input_dim=4, activation='ReLU')
+        self.d2 = Dense(64, activation='ReLU')
+        self.d3 = Dense(32, activation='ReLU')
+        self.d4 = Dense(2, activation='linear')
+        self.optimizer = keras.optimizers.Adam(0.001)
+
+        self.M = []  # 리플레이 버퍼
+
+    def call(self, x):
+        x = self.d1(x)
+        x = self.d2(x)
+        x = self.d3(x)
+        x = self.d4(x)
+        return x
+    
+#cartpole 환경 구성
+env = gym.make( 'CartPole-v1', render_mode='human')
+model = DQN()
+model(np.zeros((1, 4)))  # 모델 호출하여 변수 생성
+
+# 저장된 모델 로드
+model.load_weights('moving_cartpole_idea5.h5')
+
+#수치 설정
+episode = 10
+step = 2000
+
+for i in range(episode):
+        state = env.reset()[0] #env.reset()은 (state,{})를 반환 #[position, velocity, angle, angular velocity]
+        cart_goal = 'left'
+        state = state.reshape(1,4) #state = 1x4
+        total_reward = 0
+        score = 0
+
+        for t in range(step):
+            
+            action = np.argmax(model.call(state))
+            #다음 상태 및 보상
+            next_state, reward, done = env.step(action)[0:3]
+            if cart_goal == 'left' and next_state[0] < -0.3:
+                score += 1
+                cart_goal = 'right'
+            if cart_goal == 'right' and next_state[0] > 0.3:
+                score += 1
+                cart_goal = 'left'
+            next_state = next_state.reshape(1,4)
+
+            state = next_state
+            total_reward += reward
+
+            if done or t == step-1:
+                print('Episode {}, total_reward : {:.3f}, time : {}, score : {}'.format(i, total_reward, t+1, score))
+                break
+
+env.close()
+```
+- 가중치 저장한 것을 불러와서 episode 10번 돌려봄
+  
+# **결과**
+- 너무 삐걱대고 움직이는 반경이 크지 않다.
 
 ![Animation2](https://github.com/doeunjua/moving_cartpole2/assets/122878319/ff5af317-c511-428c-a961-1f429e883c31)
 
 
-# 종원오빠 보상 체계로 했을 때의 결과
+# **종원오빠 보상 체계로 했을 때의 결과**
+-아주 부드럽게 잘 움직인다
 ![Animation](https://github.com/doeunjua/moving_cartpole2/assets/122878319/1f4f0801-7011-48ac-928c-a8ad1060b93e)
+
+## **잘되는 이유 분석**
 ```python
 def reward_function(next_state): #state 1x4
     position = next_state[0][0]
@@ -215,5 +312,14 @@ def reward_function(next_state): #state 1x4
 
 
 ```
-# 결과
-![Alt text](Animation.gif)
+보상 코드를 한줄 한줄씩 분석해 보겠다.
+```python
+if position <0.5 and velocity>0 and angle>0.05:
+        if abs(angular_velocity)<0.5:
+            return velocity*angle*200
+        elif abs(angular_velocity)<1.5:
+            return velocity*angle*100
+        else:
+            return velocity*angle*50
+```
+- 각속도를 조절 한 것이 핵심 아이디어 인것처럼 보인다.
