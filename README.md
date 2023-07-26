@@ -276,6 +276,7 @@ env.close()
   
 # **결과**
 - 너무 삐걱대고 움직이는 반경이 크지 않다.
+- 그래도 score가 4보다 클때 가중치만 저장해서 그런지 움직이기는 하는 것 같다.
 
 ![Animation2](https://github.com/doeunjua/moving_cartpole2/assets/122878319/ff5af317-c511-428c-a961-1f429e883c31)
 
@@ -322,4 +323,4 @@ if position <0.5 and velocity>0 and angle>0.05:
         else:
             return velocity*angle*50
 ```
-- 각속도를 조절 한 것이 핵심 아이디어 인것처럼 보인다.
+- 각속도를 조절 한 것이 핵심 아이디어인 것처럼 보인다.
