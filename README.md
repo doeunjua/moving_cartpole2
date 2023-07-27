@@ -192,6 +192,21 @@ for k in range(trys):
 #환경 close
 env.close()
 ```
+#### **1.짝수 episode는 오른쪽으로 가는 것 학습, 홀수 episode는 왼쪽으로 가는 것을 학습**
+```python
+    if i%2 == 0:
+            env.state[0] -= 1
+            env.state[1] += 0.5
+            state[0] -= 1
+            state[1] += 0.5
+            cart_goal = 'right'
+        else:
+            env.state[0] += 1
+            env.state[1] -= 0.5
+            state[0] += 1
+            state[1] -= 0.5
+            cart_goal = 'left'
+```
 - 짝수번째 episode에서는 -1에서 시작해서 right로 가는 것을 학습
 - 홀수번째 episode에서는 1에서 시작해서 left로 가는 것을 학습
 - if cart_goal == 'left' and next_state[0] < -0.3: 왼쪽으로 가는 것이 목표일때 다음 상태 위치가 -0.3보다 작으면은 score에 1을 더해준다
@@ -200,6 +215,7 @@ env.close()
   if score >= 4:
             model.save_weights('moving_cartpole_idea5.h5')```
   score가 4보다 크면 가중치를 저장해 준다.
+
 
 ## **인퍼런스**
 ```python
@@ -324,3 +340,26 @@ if position <0.5 and velocity>0 and angle>0.05:
             return velocity*angle*50
 ```
 - 각속도를 조절 한 것이 핵심 아이디어인 것처럼 보인다.
+- 각속도는 안정성
+- 각속도를 작게할수록 더 안정감이 있을것이다.
+- 따라서 각속도에 따라 reward를  `velocity* angle*200`,`velocity* angle *100`,`velocity* angle *50`로 나눈것
+- position이 0.5보다 작을때는 오른쪽으로 가면 잘한것
+- 오른쪽으로 가려면 막때가 오른쪽으로 휘고 중심을 잡기 위해 cart가 오른쪽으로 이동하는 것이 좋겠다.=>`if position <0.5 and velocity>0 and angle>0.05:`
+
+```python
+elif position >-0.5 and velocity<0 and angle<-0.05:
+        if abs(angular_velocity)<0.5:
+            return velocity*angle*200
+        elif abs(angular_velocity)<1.5:
+            return velocity*angle*100
+        else:
+            return velocity*angle*50
+```
+- position이 -0.5보다 클때는 왼쪽으로 이동하면 잘한것
+- 막대를 왼쪽으로 휘고 cart를 그에 맞게 왼쪽으로 이동하면 잘 학습할것 같다는 아이디어
+- 안정도에 따라 reward를 다르게 주기 위해 각속도에 따른 조건 추가
+```python
+else:
+        return 0.05
+```
+  그 외의 경우에는 reward=0.05
